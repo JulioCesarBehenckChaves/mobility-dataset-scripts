@@ -378,6 +378,8 @@ replace dayid=363 if day=="2015-01-01"
 label variable dayid "The day of the year as a int variable to save memory"
 drop day
 
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
+
 /* From 425 to 392 MB */
 
 label define places 1 "ANCHIETA" 2 "BANGU" 3 "BARRA DA TIJUCA" 4 "BELFORD ROXO" 5 "BOTAFOGO" 6 "CACHOEIRAS DE MACACU" 7 "CAMPO GRANDE" 8 "CENTRO" 9 "CIDADE DE DEUS" 10 "COMPLEXO DO ALEMAO" 11 "COPACABANA" 12 "DUQUE DE CAXIAS" 13 "GUAPIMIRIM" 14 "GUARATIBA" 15 "ILHA DE PAQUETA" 16 "ILHA DO GOVERNADOR" 17 "INHAUMA" 18 "IRAJA" 19 "ITABORAI" 20 "ITAGUAI" 21 "JACAREPAGUA" 22 "JACAREZINHO" 23 "JAPERI" 24 "LAGOA" 25 "MADUREIRA" 26 "MAGE" 27 "MARE" 28 "MARICA" 29 "MEIER" 30 "MESQUITA" 31 "NILOPOLIS" 32 "NITEROI" 33 "NOVA IGUACU" 34 "PARACAMBI" 35 "PAVUNA" 36 "PENHA" 37 "PORTUARIA" 38 "QUEIMADOS" 39 "RAMOS" 40 "REALENGO" 41 "RIO BONITO" 42 "RIO COMPRIDO" 43 "ROCINHA" 44 "SANTA CRUZ" 45 "SANTA TERESA" 46 "SAO CRISTOVAO" 47 "SAO GONCALO" 48 "SAO JOAO DE MERITI" 49 "SEROPEDICA" 50 "TANGUA" 51 "TERESOPOLIS" 52 "TIJUCA" 53 "VIGARIO GERAL" 54 "VILA ISABEL"
@@ -441,6 +443,7 @@ replace domicileid=54 if presumed_domicile_l=="VILA ISABEL"
 label variable domicileid "The Geographic partition of the presumed domicile l as a byte variable to save memory"
 
 drop presumed_domicile_l
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 generate byte destinationid:places=.
 replace destinationid=1 if destination=="ANCHIETA"
@@ -500,6 +503,7 @@ replace destinationid=54 if destination=="VILA ISABEL"
 
 label variable destinationid "The Geographic partition of the travell destination as a byte variable to save memory"
 drop destination
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 levelsof shift, clean
 
@@ -512,6 +516,7 @@ replace shiftid=4 if shift=="WORK"
 
 label variable shiftid "The shift when the individual was detected at the destination"
 drop shift
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 levelsof day_type, clean
 label define day_types 1 "holiday" 2 "non-workday" 3 "workday"
@@ -522,6 +527,7 @@ replace day_typeid=3 if day_type=="workday"
 
 label variable day_typeid "The type of the day when the individal was detected at the destination"
 drop day_type
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 levelsof day_description
 label define day_descriptions 1 "ALE x ALG 17h" 2 "ALE x ARG (FINAL)" 3 "ALE x POR, IRA x NGR" 4 "ALGxRUS, CDSxBEL 17h" 5 "ARG x BEL" 6 "ARG x BOS, FRA x HON" 7 "ARG x IRA, ALE x GAN" 8 "ARG x SUI" 9 "AUS x HOL, ESP x CHI" 10 "AUSxESP, HOLxCHI" 11 "BEL x ALG, BRA x MEX" 12 "BEL x EUA" 13 "BEL x RUS, CDS x ALG" 14 "BRA x ALE 17h" 15 "BRA x CHI" 16 "BRA x COL 17h" 17 "BRA x CRO 17h" 18 "BRA x HOL 17h" 19 "Black Consciousness" 20 "CAM x CRO" 21 "CHI x AUS, ESP x HOL" 22 "CMA x JAP" 23 "COL x GRE, URU x COS" 24 "COL x URU 17h" 25 "COS x GRE 17h" 26 "COSxING, ITAxURU" 27 "CROxMEX, CAMxBRA 17h" 28 "Carnival" 29 "Christmas" 30 "Corpus Christi" 31 "Corpus Christi,  COLxCMA, URUxING" 32 "Corpus Christi, URUxING,  JAPxGRE" 33 "Dead s day" 34 "EUA x POR, CDS x ALG" 35 "FRA x ALE" 36 "FRA x NGR" 37 "GAN x EUA,  IRA x NGR" 38 "HOL x ARG 17h" 39 "HOL x COS 17h" 40 "HOL x MEX" 41 "HON x EQU, SUI x FRA" 42 "HONxSUI, EQUxFRA 17h" 43 "Holy Mother Our Lady Aparecida" 44 "Holy week" 45 "ING x ITA, CMA x JAP, URU x COS" 46 "ITA x COS, SUI x FRA" 47 "Independence day" 48 "JAPxCOL, GRExCMA 17h" 49 "Labor day" 50 "MEX x CAM, ESP x HOL" 51 "NGR x BOS, ALE x GAN" 52 "NGRxARG, BOSxIRA" 53 "PORxGAN, EUAxALE" 54 "Proclamation of the Republic" 55 "RUS x CDS, BRA x MEX" 56 "Reveillon" 57 "SUI x EQU, FRA x HON" 58 "Sao Jorge" 59 "Saturday" 60 "Sunday" 61 "Tiradentes" 62 "World peace" 63 "workday"
@@ -595,6 +601,7 @@ label variable day_descrid "The specific description of the day when the individ
 notes day_descrid : The specific description of the day when the individal was detected at the destination, including the matchings of the Brazilian world soccer cup.
 
 drop day_description
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 levelsof season_of_year, clean
 label define seasons 1 "AUTUMN" 2 "SPRING" 3 "SUMMER" 4 "WINTER"
@@ -607,5 +614,6 @@ replace seasonid=4 if season_of_year=="WINTER"
 
 label variable seasonid "The season of the year when the individal was detected at the destination"
 drop season_of_year
+save "MRRJ_ordinary_visiting_given_by_one_call_over_shifts.dta", replace
 
 /* Downwed from 425 to 136 MB */
