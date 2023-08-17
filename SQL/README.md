@@ -2,14 +2,16 @@
 
 ## Extraction of cell phone users' permanence locations
 
+We've created a new table (ultima_posicao_dias) to get the last detected position of each user per day.
+
 ### IN
-Usu\'arios significativos, posi\c{c}\~oes das torres de telefonia e CDRs
+Relevant users, positions of cell phone towers and CDRs.
 
 ### OUT
-Lista dos locais (PARTICAO\_GEOGRAFIA) em que um usu\'arios mais foi ``detectado'', segundo os par\^ametro estabelecidos
+List of locations (PARTICAO_GEOGRAFIA=geographic partitioning) where the users was detected according to the established parameters.
 
 ### Parameters
-Domingos, feriados e intervalo temporal do que se considera que a maioria das pessoas esteja em casa.
+Sundays, public holidays and the time period when most people are considered to be at home.
 
 ```
 CREATE TABLE ultima_posicao_dias
@@ -23,12 +25,12 @@ FROM CDR a
     ON a.longitude = b.longitude AND a.latitude = b.latitude
         INNER JOIN ligadores_significativos c
     ON c.ID = a.ID
-WHERE    -- qualquer hora em feriados
+WHERE    -- any time on holydays
     dt_ini_atividade_rede IN (SELECT dia
                     FROM feriado)
-        OR        -- qualquer hora em domingos
+        OR        -- any time on sundays
     EXTRACT (dow FROM dt_ini_atividade_rede) = 7
-        OR        -- apenas entre 19h e 7h em dias de semana
+        OR        -- only between 7pm and 6am on workdays
     (   EXTRACT (HOUR FROM hr_ini_atividade_rede) > 19
         OR EXTRACT (HOUR FROM hr_ini_atividade_rede) < 6)
 GROUP BY a.ID,
@@ -37,86 +39,117 @@ GROUP BY a.ID,
 ```
 
 
-\subsection{Quantidade de dias no local mais visitado}
-\label{sql_dias_no_local_mais_visitado}
- \paragraph{\slshape SQL para extrair o local mais visitado por usuário}
-\hrulefill \\
-  Entrada: Lista de usu\'arios e todos os locais por ele frequentados. \\
-  Par\^ametro: - \\
-  Saida: Quantidade de dias que o usu\'ario foi encontrado no local em que mais frequentou. 
- \begin{verbatim}
-    CREATE TABLE contar_dias_em_locais
-    AS
-      SELECT ID, SUM (n_dias) AS total_dias_em_locais
-	    FROM (  SELECT ID,
-			PARTICAO_GEOGRAFIA,
-			COUNT (DIA) AS n_dias
-		  FROM ultima_posicao_dias
-	      GROUP BY ID, PARTICAO_GEOGRAFIA)
-	      AS ultima_posicao
-    GROUP BY ID
-    order by ID, total_dias_em_locais;
-\end{verbatim}
+## Number of days in the most visited place
 
-\subsection{C\'alculo de resid\^encia presumida por usuário}
-\label{sql_residencia_presumida}
-\paragraph{\slshape SQL para inferir a partição geográfica de domicílio}
-\hrulefill \\
-  Entrada: Total de dias em locais mais visitados pelos usu\'arios. \\
-  Par\^ametro: Quantidade proporcional de dias no local mais visitado.\\
-  Saida: C\'alculo do local de resid\^encia presumida dos usu\'arios.
- \begin{verbatim}
-    CREATE TABLE residencia_presumida
-    AS
-      WITH residencia_presumida_bruta
-	    AS (SELECT ID, PARTICAO_GEOGRAFIA, MAX (n_dias) AS dias_local_mais_visitado
-		  FROM ( -- Conta a quantidade de dias por local de permanencia por ID
-			SELECT   ID, PARTICAO_GEOGRAFIA, COUNT (DIA) AS n_dias
-			    FROM
-				ultima_posicao_dias
-			GROUP BY ID, PARTICAO_GEOGRAFIA)
-		      AS ultima_posicao
-    group by ID, PARTICAO_GEOGRAFIA)
-    select ID, PARTICAO_GEOGRAFIA, dias_local_mais_visitado, total_dias_em_locais
-    FROM
-    (
-    SELECT T1.ID,
-	  T1.PARTICAO_GEOGRAFIA,
-	  T1.dias_local_mais_visitado,
-	  T2.total_dias_em_locais
-    FROM residencia_presumida_bruta T1
-    INNER JOIN contar_dias_em_locais T2 ON T2.ID=T1.ID
-    ) AS residencia_presumida_validacao
-    where total_dias_em_locais >= 8
-      and dias_local_mais_visitado > total_dias_em_locais / 2;
-\end{verbatim}
+SQL statement to extract the most visited location per user.
+We've created a new table (contar_dias_em_locais) to count the days based on the previous created table ultima_posicao_dias.
 
-\subsection{Cálculo do fator de expans\~ao populacional fixo}
-\label{sql_k_fixo}
-  \paragraph{\slshape SQL }
-\hrulefill \\
-  Entrada: Local de resid\^encia presumida dos usu\'arios e base de popula\c{c}\~ao do IBGE. \\
-  Par\^ametro: -\\
-  Saida: Fator de expans\~ao populacional fixo.
- \begin{verbatim}
-      create table fator_k_l as
-      select 
-	  r.PARTICAO_GEOGRAFIA,
-	  count(r.ID) as USU,
-	  POP,
-	  POP/count(r.ID) as k_l
-      from
-	  residencia_presumida r
-	  inner join base_IBGE i
-	      on i.PARTICAO_GEOGRAFIA = r.PARTICAO_GEOGRAFIA
-      group by r.PARTICAO_GEOGRAFIA, POP;
-\end{verbatim}
+### IN
+
+List of users and all the places they frequent.
+
+### OUT 
+Number of days that the user was found in the place where he/she frequented the most.
+
+### Parameter
+NA.
+
+```
+CREATE TABLE contar_dias_em_locais
+AS
+	SELECT ID, SUM (n_dias) AS total_dias_em_locais
+	FROM (  SELECT ID,
+		PARTICAO_GEOGRAFIA,
+		COUNT (DIA) AS n_dias
+		FROM ultima_posicao_dias
+		GROUP BY ID, PARTICAO_GEOGRAFIA)
+		AS ultima_posicao
+GROUP BY ID
+order by ID, total_dias_em_locais;
+```
+
+## Calculation of presumed residence per user
+SQL statement to infer the geographic partition of household.
+
+### IN
+
+Total days in places most visited by users.
+
+### OUT
+
+Calculation of presumed place of residence of users.
+
+### Parameter
+
+Proportional number of days in the most visited place given by total_dias_em_locais >= 8 and total_dias_em_locais / 2.
+
+```
+CREATE TABLE residencia_presumida
+AS
+	WITH residencia_presumida_bruta
+	AS (SELECT ID, PARTICAO_GEOGRAFIA, MAX (n_dias) AS dias_local_mais_visitado
+		FROM ( -- Counts the number of days per place of stay per ID
+		SELECT   ID, PARTICAO_GEOGRAFIA, COUNT (DIA) AS n_dias
+			FROM
+			ultima_posicao_dias
+		GROUP BY ID, PARTICAO_GEOGRAFIA)
+			AS ultima_posicao
+group by ID, PARTICAO_GEOGRAFIA)
+select ID, PARTICAO_GEOGRAFIA, dias_local_mais_visitado, total_dias_em_locais
+FROM
+(
+SELECT T1.ID,
+	T1.PARTICAO_GEOGRAFIA,
+	T1.dias_local_mais_visitado,
+	T2.total_dias_em_locais
+FROM residencia_presumida_bruta T1
+INNER JOIN contar_dias_em_locais T2 ON T2.ID=T1.ID
+) AS residencia_presumida_validacao
+where total_dias_em_locais >= 8
+	and dias_local_mais_visitado > total_dias_em_locais / 2;
+```
+
+## Calculation of the fixed population expansion factor
+
+We have data from one cell phone operator, which means only a market share. We need to expand the cell phone user to represent a brazilian citizen. We did a 'geographic' join with the census database (base_IBGE).
+
+### IN
+
+Presumed place of residence of users and IBGE population base.
+
+### OUT
+
+Fixed population expansion factor.
+
+### Parameter
+NA.
+
+```
+create table fator_k_l as
+select 
+r.PARTICAO_GEOGRAFIA,
+count(r.ID) as USU,
+POP,
+POP/count(r.ID) as k_l
+from
+residencia_presumida r
+inner join base_IBGE i
+	on i.PARTICAO_GEOGRAFIA = r.PARTICAO_GEOGRAFIA
+group by r.PARTICAO_GEOGRAFIA, POP;
+```
+
+## Adaptive population expansion factor
 
 
-\subsection{Fator de expans\~ao populacional adaptativo}
-\label{sql_4312e}
 
- %\paragraph{\slshape SQL 4.3.1.2.e}
+### IN
+
+### OUT
+
+### Parameter
+
+ 
+
 \hrulefill \\
   Entrada: Viagens ``puras'', ou seja, sem fator de expans\~ao algum. \\
   Par\^ametro: -\\
@@ -130,7 +163,12 @@ GROUP BY a.ID,
     group by dia, local_residência order by dia, local_residência;
 \end{verbatim}
 
-\hrulefill \\
+
+### IN
+
+### OUT
+
+### Parameter
   Entrada: Viagens realizadas por dia pelos residentes de $l$. \\
   Par\^ametro: -\\
   Saida: \#Viagens expandidas adaptativamente \`a $OD$ e \`a $d$.
@@ -166,8 +204,13 @@ GROUP BY a.ID,
 
 \subsection{Viagens por dia}
 
-  %\paragraph{\slshape SQL 4.4.1} \label{sql_441kfixo}
-\hrulefill \\
+
+### IN
+
+### OUT
+
+### Parameter
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR e base de torres de telefonia. \\
   Par\^ametro: O dia, o intervalo temporal entre as chamadas e a dist\^ancia percorrida.\\
   Saida: Quantidade de deslocamentos entre todas as origens e destino por dia.
@@ -277,8 +320,13 @@ GROUP BY a.ID,
     GROUP BY origem, destino;
 \end{verbatim}
 
-  %\paragraph{\slshape SQL 4.4.1.d.1} \label{sql_441d1}
-\hrulefill \\  \begin{small}
+
+### IN
+
+### OUT
+
+### Parameter
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR e base de torres de telefonia e fatores de expans\~ao fixo. \\
   Par\^ametro: -\\
   Saida: Quantidade de deslocamentos da popula\c{c}\~ao, entre todas as origens e destino por dia. \end{small} 
@@ -306,8 +354,13 @@ GROUP BY a.ID,
                                                r.PARTICAO_GEOGRAFIA
 \end{verbatim}
 
-  %\paragraph{\slshape SQL 4.4.1.d.2}  \label{sql_441d2}
-\hrulefill  \\  \begin{small}
+
+### IN
+
+### OUT
+
+### Parameter
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR e base de torres de telefonia e fatores de expans\~ao adaptativo. \\
   Par\^ametro: -\\
   Saida: Quantidade de deslocamentos da popula\c{c}\~ao, entre todas as origens e destino por dia. \end{small} 
@@ -336,8 +389,13 @@ GROUP BY a.ID,
                                                and c.DIA = a.dt_ini_atividade_rede
 \end{verbatim}
 
-  %\paragraph{\slshape SQL 4.5.c.1} \label{sql_45c1}
-\hrulefill \\  \begin{small}
+  
+### IN
+
+### OUT
+
+### Parameter  
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR e base de torres de telefonia. \\
   Par\^ametro: O intervalo espa\c{c}o-temporal do evento, atrav\'es das tabelas EVENTO e EVENTO\_LATLNG.\\
   Saida: Descoberta de usu\'arios que estavam no evento. \end{small}
@@ -371,8 +429,13 @@ GROUP BY a.ID,
     group by ID,  a.LAT_LNG;
 \end{verbatim}
 
-%\paragraph{\slshape SQL 4.5.c.2}  \label{sql_45c2}
-\hrulefill \\   \begin{small}
+
+### IN
+
+### OUT
+
+### Parameter
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR e base de torres de telefonia. \\
   Par\^ametro: O intervalo espa\c{c}o-temporal do evento, atrav\'es das tabelas EVENTO e \-  EVENTO\_LATLNG.\\
   Saida: Descoberta de usu\'arios que estavam no evento. \end{small}
@@ -407,8 +470,13 @@ GROUP BY a.ID,
       group by ID,  a.LAT_LNG;
 \end{verbatim}
 
-  %\paragraph{\slshape SQL 4.5.e}  \label{sql_45e}
-\hrulefill \\  \begin{small}
+
+### IN
+
+### OUT
+
+### Parameter
+
   Entrada: Local de resid\^encia presumida dos usu\'arios, base de CDR, base de torres de telefonia. \\
   Par\^ametro: Torres de telefonia que atenderam o evento.\\
   Saida: Quantidade de visitantes em eventos, assim como as regi\~oes de origem inferida. \end{small}
