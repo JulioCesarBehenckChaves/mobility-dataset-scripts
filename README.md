@@ -1,6 +1,6 @@
 # mobility-dataset-scripts
 
-Script used to manipulate human mobility datasets. Basically in SQL and Stata.
+Scripts used to manipulate human mobility datasets. Basically in SQL and Stata.
 
 We've published some articles using human mobility data:
 
